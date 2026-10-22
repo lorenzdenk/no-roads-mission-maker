@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="nrmm-token" content="__TOKEN__">
+<title>No Roads Mission Maker</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="lg" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.006 0.009" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="16" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <linearGradient id="hillA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9be85a"/><stop offset="1" stop-color="#3fae22"/></linearGradient>
+    <linearGradient id="hillB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6fd23a"/><stop offset="1" stop-color="#1f8a1a"/></linearGradient>
+  </defs>
+</svg>
+
+<div class="sky" aria-hidden="true">
+  <div class="sun"></div><div class="rays"></div>
+  <div id="bubbles"></div>
+  <svg class="hill" viewBox="0 0 1440 260" preserveAspectRatio="none">
+    <path d="M0 150 C 260 70 520 120 760 90 C 1030 55 1240 110 1440 70 L1440 260 L0 260Z" fill="url(#hillA)" opacity=".92"/>
+    <path d="M0 200 C 300 130 560 190 820 150 C 1080 112 1260 170 1440 140 L1440 260 L0 260Z" fill="url(#hillB)"/>
+    <path d="M0 200 C 300 130 560 190 820 150 C 1080 112 1260 170 1440 140" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3"/>
+  </svg>
+</div>
+
+<div id="app">
+  <header class="titlebar glass refract">
+    <div class="logo" aria-hidden="true"></div>
+    <div><h1>No Roads Mission Maker</h1></div>
+    <span class="sub">Wege ohne Straße finden</span>
+    <div class="spacer"></div>
+    <span class="pill" id="netpill"><span class="led"></span><span id="nettext">Keine Karte geladen</span></span>
+  </header>
+
+  <main class="stage">
+    <aside class="dock glass refract" aria-label="Einstellungen">
+      <div class="dock-scroll">
+
+        <details class="sec" id="sec-data" open>
+          <summary><span class="step">1</span>Karte<span class="chev"></span></summary>
+          <div class="body">
+            <p class="hint">Eine OSM-Datei im PBF-Format, zum Beispiel ein Regionsauszug von Geofabrik.</p>
+            <label class="fl" for="pbfpath">Kartendatei</label>
+            <div class="row">
+              <input type="text" id="pbfpath" class="grow" placeholder="C:\Karten\freiburg.osm.pbf" spellcheck="false">
+              <button class="gel ghost small" id="pickpbf" type="button">Wählen</button>
+            </div>
+            <div class="chipbar" id="hdrinfo"></div>
+            <details style="margin-top:10px">
+              <summary style="cursor:pointer;font-size:13px">Ausschnitt begrenzen</summary>
+              <p class="hint">Nur dieses Rechteck einlesen. Das spart bei grossen Dateien Zeit und Speicher.</p>
+              <div class="row"><input type="number" step="any" id="bb-s" placeholder="Süd (Breite)"><input type="number" step="any" id="bb-n" placeholder="Nord (Breite)"></div>
+              <div class="row" style="margin-top:6px"><input type="number" step="any" id="bb-w" placeholder="West (Länge)"><input type="number" step="any" id="bb-e" placeholder="Ost (Länge)"></div>
+            </details>
+            <div class="row" style="margin-top:12px"><button class="gel green grow" id="loadbtn" type="button">Karte laden</button></div>
+            <div class="err" id="loaderr" hidden></div>
+
+            <details style="margin-top:12px">
+              <summary style="cursor:pointer;font-size:13px">Wegnetz anpassen</summary>
+              <p class="hint">Diese Einstellungen gelten für das ganze Netz. Nach einer Änderung das Netz neu aufbauen.</p>
+              <div class="opt"><label class="switch"><input type="checkbox" id="ex-motorway" checked aria-label="Autobahnen ausschließen"><i></i></label><span>Autobahnen ausschließen</span></div>
+              <div class="opt"><label class="switch"><input type="checkbox" id="ex-trunk" checked aria-label="Schnellstraßen ausschließen"><i></i></label><span>Schnellstraßen ausschließen</span></div>
+              <label class="fl" for="par-dist">Abstand für „parallel zur Straße“: <b id="par-dist-v">10</b> m</label>
+              <input type="range" id="par-dist" min="0" max="40" step="1" value="10">
+              <label class="fl" for="par-share">Mindestanteil nahe der Straße: <b id="par-share-v">50</b> %</label>
+              <input type="range" id="par-share" min="10" max="100" step="5" value="50">
+              <div class="row" style="margin-top:10px"><button class="gel ghost small grow" id="rebuildbtn" type="button" disabled>Netz neu aufbauen</button></div>
+            </details>
+          </div>
+        </details>
+
+        <details class="sec" id="sec-route" open>
+          <summary><span class="step">2</span>Start und Ziel<span class="chev"></span></summary>
+          <div class="body">
+            <p class="hint">Auf die Karte klicken oder Koordinaten eingeben (Breite, Länge).</p>
+            <label class="fl" for="start">Start</label>
+            <div class="row"><input type="text" id="start" class="grow" placeholder="47.6562, 9.1772" spellcheck="false">
+              <button class="gel green pinbtn" id="pick-start" type="button" aria-label="Start auf der Karte setzen" title="Start auf der Karte setzen">A</button></div>
+            <label class="fl" for="end">Ziel</label>
+            <div class="row"><input type="text" id="end" class="grow" placeholder="47.6893, 9.1260" spellcheck="false">
+              <button class="gel pinbtn" id="pick-end" type="button" aria-label="Ziel auf der Karte setzen" title="Ziel auf der Karte setzen" style="filter:hue-rotate(150deg) saturate(1.4)">B</button></div>
+            <div class="row" style="margin-top:8px"><button class="gel ghost small" id="swap" type="button">Start und Ziel tauschen</button></div>
+          </div>
+        </details>
+
+        <details class="sec" id="sec-method" open>
+          <summary><span class="step">3</span>Methode<span class="chev"></span></summary>
+          <div class="body">
+            <div class="seg" role="group" aria-label="Methode">
+              <button type="button" id="m-weighted" aria-pressed="true">Straßenarm</button>
+              <button type="button" id="m-paths" aria-pressed="false">Pfade maximieren</button>
+            </div>
+
+            <div id="pane-weighted">
+              <p class="hint">Jeder Wegtyp hat einen Faktor. Ein Meter Straße mit Faktor 20 kostet so viel wie 20 Meter Pfad. Das Schloss sperrt einen Wegtyp ganz.</p>
+              <div id="factors"></div>
+              <div class="row" style="margin-top:6px"><button class="gel ghost small" id="reset-factors" type="button">Voreinstellung</button></div>
+            </div>
+
+            <div id="pane-paths" hidden>
+              <p class="hint">Pfade (path, footway, Treppen) kosten 1. Alle anderen Wege kosten ein Vielfaches K davon. Mit steigendem K nimmt die Route mehr Umwege für mehr Pfad in Kauf.</p>
+              <div class="kbox"><input type="range" id="k" min="0" max="100" step="1" value="35" aria-label="Faktor K"><div class="kbig" id="kval">5</div></div>
+              <p class="hint" id="kinfo"></p>
+            </div>
+          </div>
+        </details>
+
+        <details class="sec" id="sec-gpx">
+          <summary><span class="step">4</span>Korridor um einen GPX-Track<span class="chev"></span></summary>
+          <div class="body">
+            <p class="hint">Optional: Die Route darf den Track nur bis zu einer Breite verlassen. So bleibt zum Beispiel ein Fernwanderweg erkennbar.</p>
+            <div class="row"><button class="gel ghost small" id="pickgpx" type="button">GPX-Datei wählen</button><span id="gpxname" class="hint" style="margin:0"></span></div>
+            <div id="gpxopts" hidden>
+              <div class="opt"><label class="switch"><input type="checkbox" id="cor-on" checked aria-label="Korridor verwenden"><i></i></label><span>Korridor verwenden</span></div>
+              <label class="fl" for="cor-w">Korridorbreite: <b id="cor-w-v">1000</b> m auf jeder Seite</label>
+              <input type="range" id="cor-w" min="100" max="5000" step="50" value="1000">
+              <div class="row" style="margin-top:10px"><button class="gel ghost small grow" id="gpx-ends" type="button">Start und Ziel aus Track übernehmen</button></div>
+              <div class="row" style="margin-top:6px"><button class="gel ghost small grow" id="gpx-clear" type="button">Track entfernen</button></div>
+            </div>
+          </div>
+        </details>
+      </div>
+      <div class="dock-foot">
+        <button class="gel green big" id="go" type="button" disabled>Route berechnen</button>
+        <div class="err" id="routeerr" hidden></div>
+      </div>
+    </aside>
+
+    <section class="mapwrap glass" aria-label="Karte und Ergebnis">
+      <div class="mapframe" id="mapframe">
+        <canvas id="map" aria-label="Karte mit Wegnetz"></canvas>
+        <div class="maphint glass" id="maphint" hidden></div>
+        <div class="zoom"><button class="gel" id="zin" type="button" aria-label="Hineinzoomen">+</button><button class="gel" id="zout" type="button" aria-label="Herauszoomen">&minus;</button><button class="gel ghost" id="zfit" type="button" aria-label="Ganze Karte zeigen" style="font-size:15px">&#9974;</button></div>
+        <div class="scalebar" id="scalebar"></div>
+        <div class="attrib">Kartendaten &copy; OpenStreetMap-Mitwirkende</div>
+
+        <div class="empty" id="empty">
+          <div class="card glass">
+            <div class="logo" style="margin:0 auto" aria-hidden="true"></div>
+            <h2>Karte laden</h2>
+            <p>Wähle eine OSM-Datei (.pbf). Danach klickst du Start und Ziel auf die Karte und bekommst eine Route mit möglichst wenig Straße.</p>
+            <button class="gel green" id="emptyload" type="button">Kartendatei wählen</button>
+          </div>
+        </div>
+
+        <div class="result glass" id="result" hidden>
+          <h3>Ergebnis</h3>
+          <svg class="gauge" id="gauge" viewBox="0 0 220 220" role="img" aria-label="Pfadanteil"></svg>
+          <div class="kv">
+            <div class="cell"><b id="r-len">–</b><span>Länge</span></div>
+            <div class="cell"><b id="r-road">–</b><span>Straßenartig</span></div>
+            <div class="cell"><b id="r-detour">–</b><span>Umweg gegenüber kürzester</span></div>
+            <div class="cell"><b id="r-hints">–</b><span>Zugangshinweise</span></div>
+          </div>
+          <div class="stack" id="r-stack"></div>
+          <ul class="legend" id="r-legend"></ul>
+          <div class="sub-h">Gegenüber der kürzesten Route</div>
+          <div id="r-cmp"></div>
+          <div class="exports">
+            <button class="gel green" id="save" type="button">Dateien speichern</button>
+            <div class="row"><input type="text" id="outdir" class="grow" aria-label="Zielordner" spellcheck="false"><button class="gel ghost small" id="pickout" type="button">Ordner</button></div>
+            <button class="gel ghost small" id="openout" type="button" hidden>Ordner öffnen</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="drawer" id="drawer">
+        <div class="drawer-head">
+          <div class="tabs" role="tablist">
+            <button class="tab" role="tab" id="tab-log" aria-selected="false" type="button">Zugangsprotokoll<span class="badge" id="logbadge" hidden>0</span></button>
+            <button class="tab" role="tab" id="tab-sweep" aria-selected="false" type="button">Umweg gegen Pfadanteil</button>
+          </div>
+          <div class="spacer"></div>
+          <button class="gel ghost small" id="drawer-toggle" type="button">Einblenden</button>
+        </div>
+        <div class="drawer-body">
+          <div id="panel-log" hidden>
+            <table><thead><tr><th>Weg</th><th>Typ</th><th class="num">Meter</th><th>Hinweise (nur protokolliert)</th></tr></thead><tbody id="logbody"></tbody></table>
+          </div>
+          <div id="panel-sweep" hidden>
+            <div class="sweepbox">
+              <div><svg id="sweepsvg" viewBox="0 0 520 200" role="img" aria-label="Pfadanteil gegen Umweg"></svg></div>
+              <div>
+                <label class="fl" for="sweepks">Werte für K</label>
+                <input type="text" id="sweepks" value="1.5, 2, 3, 5, 8, 12, 20, 40">
+                <div class="row" style="margin-top:8px"><button class="gel small grow" id="sweepgo" type="button" disabled>Vergleich starten</button></div>
+                <table style="margin-top:8px"><tbody id="sweepbody"></tbody></table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="card glass">
+    <h2 id="ov-title">Einen Moment</h2>
+    <div class="pbar"><i id="ov-bar"></i></div>
+    <div class="msg" id="ov-msg"></div>
+    <button class="gel ghost small" id="ov-cancel" type="button">Abbrechen</button>
+  </div>
+</div>
+<div class="toast glass" id="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

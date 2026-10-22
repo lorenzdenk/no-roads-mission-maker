@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "no-roads-mission-maker"
+version = "0.1.0"
+description = "Wege ohne Straße: Routen aus OSM-PBF-Daten über Pfade, Feldwege und Radwege"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "scipy>=1.10"]
+
+[project.optional-dependencies]
+gui = ["pywebview>=5.0"]
+dev = ["pytest>=7"]
+
+[project.scripts]
+nrmm = "nrmm.app:main"
+nrmm-cli = "nrmm.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+nrmm = ["web/*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

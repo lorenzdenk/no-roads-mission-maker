@@ -1,0 +1,47 @@
+name: Windows-EXE
+
+on:
+  push:
+    branches: [main, "claude/**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Abhängigkeiten
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[gui,dev]" pyinstaller
+      - name: Tests
+        run: python -m pytest -q
+      - name: EXE bauen
+        run: |
+          python -m PyInstaller --noconfirm --clean --onefile --windowed `
+            --name NoRoadsMissionMaker --paths src `
+            --add-data "src/nrmm/web;nrmm/web" `
+            --collect-all webview `
+            packaging/entry.py
+      - name: Start-Test (Server läuft, Oberfläche wird ausgeliefert)
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath dist\NoRoadsMissionMaker.exe -ArgumentList "--browser","--no-open" -PassThru
+          Start-Sleep -Seconds 12
+          if ($p.HasExited) { Get-Content "$env:USERPROFILE\.no-roads-mission-maker\log.txt" -ErrorAction SilentlyContinue; throw "EXE beendet sich sofort" }
+          $p.Kill()
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NoRoadsMissionMaker-windows
+          path: dist/NoRoadsMissionMaker.exe
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/NoRoadsMissionMaker.exe
