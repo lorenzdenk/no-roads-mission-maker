@@ -28,6 +28,13 @@ Lokal unter Windows: `powershell -File packaging/build_exe.ps1`.
 Die Oberfläche läuft in einem eigenen Fenster (WebView2, bei Windows 10/11 vorhanden).
 Fehlt es, öffnet sich stattdessen der Standardbrowser.
 
+## Android-App
+
+`android/` enthält ein Gradle-Projekt (Chaquopy): dieselbe Python-Logik und dieselbe Oberfläche laufen in einer WebView.
+Der Workflow `Android-APK` baut `app-debug.apk` (Artifact `NoRoadsMissionMaker-android`); auf dem Handy installieren
+(„Unbekannte Apps zulassen“). Kartendateien über „Wählen“ aus dem Speicher holen, Ergebnisse über „Ordner öffnen“ teilen.
+Große `.pbf`-Dateien sprengen den Speicher des Handys: besser einen Ausschnitt (z. B. mit `osmium extract`) verwenden.
+
 ## Entwicklung
 
 ```

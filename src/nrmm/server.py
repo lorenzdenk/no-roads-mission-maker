@@ -23,8 +23,9 @@ from .export import parse_gpx, write_outputs
 from .network import (CLASSES, DEFAULT_EXCLUDED, FACTORS_V1, K_MULT, KEYS, KIDX, build_network, factors_for_k)
 from .pbf import Cancelled, read_header_bbox, read_pbf
 
-CACHE_DIR = os.path.join(os.path.expanduser("~"), ".no-roads-mission-maker", "cache")
-DEFAULT_OUT = os.path.join(os.path.expanduser("~"), "Documents", "NoRoadsMissionMaker")
+_HOME = os.environ.get("NRMM_HOME") or os.path.join(os.path.expanduser("~"), ".no-roads-mission-maker")
+CACHE_DIR = os.path.join(_HOME, "cache")
+DEFAULT_OUT = os.environ.get("NRMM_OUT") or os.path.join(os.path.expanduser("~"), "Documents", "NoRoadsMissionMaker")
 # Zeichenreihenfolge bei zu vielen Segmenten: wichtige Pfadklassen zuerst
 DRAW_PRIORITY = ["pfad", "feldweg", "radweg", "fussg", "primary", "secondary", "nebenstr",
                  "pfad_par", "radweg_par", "service", "sidewalk", "quer"]

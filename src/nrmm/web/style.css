@@ -273,4 +273,14 @@ a.lnk { color: var(--aqua-deep); cursor: pointer; text-decoration: underline; }
   .mapwrap { height: 70vh; }
   .result { position: static; width: auto; max-height: none; margin: 8px; }
 }
+@media (max-width: 700px) {
+  #app { padding: 8px 8px 14px; gap: 8px; }
+  .titlebar { padding: 8px 12px; gap: 8px; }
+  .titlebar .sub, .titlebar .hint { display: none; }
+  .mapwrap { height: 78vh; }
+  .dock { overflow: visible; }
+  .sweepbox { grid-template-columns: 1fr; }
+}
+html.android body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+html.android #cv, html.android canvas#map { touch-action: none; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

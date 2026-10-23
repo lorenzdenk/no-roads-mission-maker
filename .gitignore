@@ -7,3 +7,6 @@ dist/
 *.pbf
 *.nrmm-cache
 out/
+android/.gradle/
+android/**/build/
+android/local.properties

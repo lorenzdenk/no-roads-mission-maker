@@ -232,15 +232,27 @@ function onViewChanged(full) { if (full) { renderNet(); } draw(); clearTimeout(o
 
 /* ------------------------------------------------------------------ Karte: Eingaben */
 let drag = null;
-cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); drag = { x: e.clientX, y: e.clientY, vx: S.view.x, vy: S.view.y, moved: false }; });
+const ptrs = new Map(); let pinch = null;
+cv.addEventListener('pointerdown', (e) => {
+  cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: S.view.z }; if (drag) drag.moved = true; return; }
+  drag = { x: e.clientX, y: e.clientY, vx: S.view.x, vy: S.view.y, moved: false };
+});
 cv.addEventListener('pointermove', (e) => {
+  if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pinch && ptrs.size >= 2) {
+    const [a, b] = [...ptrs.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+    S.view.z = Math.max(2, Math.min(19, pinch.z + Math.log2(d / pinch.d))); onViewChanged(false); return;
+  }
   if (!drag) return;
   const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
   if (Math.abs(dx) + Math.abs(dy) > 4) { drag.moved = true; cv.classList.add('dragging'); }
   if (drag.moved) { const s = scale(); S.view.x = drag.vx - dx / s; S.view.y = drag.vy - dy / s; onViewChanged(false); }
 });
+cv.addEventListener('pointercancel', (e) => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; drag = null; cv.classList.remove('dragging'); });
 cv.addEventListener('pointerup', (e) => {
   cv.classList.remove('dragging');
+  ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null;
   if (drag && !drag.moved && S.pick) {
     const r = cv.getBoundingClientRect(); const ll = fromScreen(e.clientX - r.left, e.clientY - r.top);
     setPoint(S.pick, ll); setPick(S.pick === 'start' ? 'end' : null);
@@ -317,7 +329,12 @@ function applyState(st, refit) {
   }
   if (st.out_dir && !$('outdir').value) $('outdir').value = store.get('outdir', st.out_dir);
 }
-async function pickFile(kind) { const j = await api('/api/pick', { kind }); return j.path; }
+const ANDROID = typeof window.AndroidBridge !== 'undefined';
+if (ANDROID) document.documentElement.classList.add('android');
+async function pickFile(kind) {
+  if (ANDROID) return new Promise((res) => { window.__pickDone = (p) => res(p || null); window.AndroidBridge.pick(kind); });
+  const j = await api('/api/pick', { kind }); return j.path;
+}
 async function choosePbf() {
   const p = await pickFile('pbf'); if (!p) return;
   $('pbfpath').value = p; store.set('pbf', p); await showHeader();
@@ -524,7 +541,7 @@ $('save').addEventListener('click', async () => {
     toast(`${r.files.length} Dateien gespeichert`);
   } catch (e) { toast(e.message, 6000); }
 });
-$('openout').addEventListener('click', () => api('/api/open', { path: $('openout').dataset.dir }));
+$('openout').addEventListener('click', () => (ANDROID ? window.AndroidBridge.share($('openout').dataset.dir) : api('/api/open', { path: $('openout').dataset.dir })));
 
 /* ------------------------------------------------------------------ Start */
 (async function init() {
